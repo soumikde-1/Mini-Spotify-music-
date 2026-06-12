@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sotify Music</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
+</head>
+<body>
+
+    <div id="yt-player-container" style="position:fixed; bottom:-10px; right:-10px; width:1px; height:1px; opacity: 0.01; overflow:hidden;"></div>
+
+    <div id="app-wrapper">
+        <div id="login-section" class="screen show">
+            <div class="splash-content">
+                <div class="logo-large">🟢</div> <h1 class="splash-heading">Millions of Free Songs on Sotify</h1>
+                <input type="email" id="login-input" placeholder="ইমেল বা নাম লিখুন" required>
+                <input type="password" id="password-input" placeholder="Password (অ্যাডমিনের জন্য)" style="display:none;">
+                <button id="entry-btn" onclick="handleEntry()" class="sp-btn green-btn">Continue</button>
+            </div>
+        </div>
+
+        <div id="dashboard-screen" class="screen">
+            <header class="app-header">
+                <div class="profile-placeholder">👤</div>
+                <div class="header-text">
+                    <p class="greeting">Hi, <span id="welcome-name">User</span></p>
+                    <h2 class="playlist-heading">World of Music</h2>
+                </div>
+                <button onclick="logout()" class="sp-btn small-btn logout-btn">Log out</button>
+            </header>
+
+            <div id="admin-controls" class="admin-panel card" style="display:none;">
+                <h3>অ্যাডমিন প্যানেল</h3>
+                <div class="form-row">
+                    <select id="admin-group-select"></select>
+                </div>
+                <div class="form-row">
+                    <textarea id="yt-url-input" placeholder="YouTube Link, Embed Code বা ID paste করো"></textarea>
+                </div>
+                <button onclick="uploadSong()" class="sp-btn green-btn small-upload">আপলোড করো</button>
+            </div>
+
+            <main class="content-area">
+                <div class="section-row group-controls">
+                    <h3>Group</h3>
+                    <select id="user-group-select" onchange="changeGroup()">
+                        </select>
+                    <p class="song-count">Total Songs: <span id="total-songs-count">0</span></p>
+                </div>
+
+                <div id="playlist-view" class="playlist-view">
+                    </div>
+            </main>
+
+            <footer id="bottom-player" class="bottom-player">
+                <div class="player-content">
+                    <div class="song-info-small">
+                        <div class="mini-art">🎵</div>
+                        <div class="text">
+                            <marquee scrollamount="3"><p id="player-song-title">Select a Song</p></marquee>
+                            <p id="player-artist">Group <span id="current-group-display">...</span></p>
+                        </div>
+                    </div>
+                    <div class="player-btns">
+                        <button onclick="playPrev()" class="ctrl-btn icon-prev">⏮</button>
+                        <button onclick="togglePlay()" id="play-pause-btn" class="ctrl-btn icon-play-pause">▶️</button>
+                        <button onclick="playNext()" class="ctrl-btn icon-next">⏭</button>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
