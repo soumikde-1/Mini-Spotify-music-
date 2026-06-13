@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sotify Music</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>Mùsïç Fi</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -12,64 +12,81 @@
 </head>
 <body>
 
-    <div id="yt-player-container" style="position:fixed; bottom:-10px; right:-10px; width:1px; height:1px; opacity: 0.01; overflow:hidden;"></div>
+    <div id="yt-player-container" style="position:absolute; top:-9999px; left:-9999px; width:300px; height:300px;"></div>
 
     <div id="app-wrapper">
         <div id="login-section" class="screen show">
             <div class="splash-content">
-                <div class="logo-large">🟢</div> <h1 class="splash-heading">Millions of Free Songs on Sotify</h1>
+                <div class="logo-large">🎵</div>
+                <h1 class="splash-heading">Mùsïç Fi</h1>
+                <p class="sub-heading">Your Personal Music Universe</p>
                 <input type="email" id="login-input" placeholder="ইমেল বা নাম লিখুন" required>
                 <input type="password" id="password-input" placeholder="Password (অ্যাডমিনের জন্য)" style="display:none;">
-                <button id="entry-btn" onclick="handleEntry()" class="sp-btn green-btn">Continue</button>
+                <button id="entry-btn" onclick="handleEntry()" class="theme-btn">CONTINUE</button>
             </div>
         </div>
 
-        <div id="dashboard-screen" class="screen">
+        <div id="dashboard-screen" class="screen" style="display: none;">
+            
             <header class="app-header">
-                <div class="profile-placeholder">👤</div>
-                <div class="header-text">
-                    <p class="greeting">Hi, <span id="welcome-name">User</span></p>
-                    <h2 class="playlist-heading">World of Music</h2>
+                <div class="header-left">
+                    <div class="profile-placeholder">🎵</div>
+                    <div class="header-text">
+                        <p class="greeting">Welcome to <span style="font-weight:bold; color:var(--theme-color);">Mùsïç Fi</span></p>
+                        <h2 class="playlist-heading" id="welcome-name">User</h2>
+                    </div>
                 </div>
-                <button onclick="logout()" class="sp-btn small-btn logout-btn">Log out</button>
+                <button onclick="logout()" class="theme-btn logout-btn">LOG OUT</button>
             </header>
 
             <div id="admin-controls" class="admin-panel card" style="display:none;">
                 <h3>অ্যাডমিন প্যানেল</h3>
-                <div class="form-row">
-                    <select id="admin-group-select"></select>
+                
+                <div class="admin-group-manager">
+                    <select id="admin-group-select" class="admin-select"></select>
+                    <div class="admin-actions">
+                        <button onclick="createNewGroup()" class="action-btn">➕ New</button>
+                        <button onclick="renameGroup()" class="action-btn">✏️ Edit</button>
+                        <button onclick="deleteGroup()" class="action-btn danger-btn">🗑️ Delete</button>
+                    </div>
                 </div>
-                <div class="form-row">
-                    <textarea id="yt-url-input" placeholder="YouTube Link, Embed Code বা ID paste করো"></textarea>
+
+                <div class="upload-section">
+                    <textarea id="yt-url-input" placeholder="YouTube Link বা ID paste করো"></textarea>
+                    <button onclick="uploadSong()" class="theme-btn small-upload">আপলোড করো</button>
                 </div>
-                <button onclick="uploadSong()" class="sp-btn green-btn small-upload">আপলোড করো</button>
             </div>
 
             <main class="content-area">
-                <div class="section-row group-controls">
-                    <h3>Group</h3>
-                    <select id="user-group-select" onchange="changeGroup()">
-                        </select>
-                    <p class="song-count">Total Songs: <span id="total-songs-count">0</span></p>
+                <div class="group-controls">
+                    <h3>Select Group</h3>
+                    <select id="user-group-select" onchange="changeGroup()"></select>
                 </div>
+                <p class="song-count">Total Songs: <span id="total-songs-count">0</span></p>
 
                 <div id="playlist-view" class="playlist-view">
                     </div>
             </main>
 
             <footer id="bottom-player" class="bottom-player">
+                <div class="progress-container">
+                    <span id="current-time">0:00</span>
+                    <input type="range" id="seek-bar" value="0" min="0" max="100" step="1" onchange="seekVideo()">
+                    <span id="total-time">0:00</span>
+                </div>
+
                 <div class="player-content">
                     <div class="song-info-small">
                         <div class="mini-art">🎵</div>
                         <div class="text">
-                            <marquee scrollamount="3"><p id="player-song-title">Select a Song</p></marquee>
+                            <marquee scrollamount="4"><p id="player-song-title">Select a Song</p></marquee>
                             <p id="player-artist">Group <span id="current-group-display">...</span></p>
                         </div>
                     </div>
                     <div class="player-btns">
-                        <button onclick="playPrev()" class="ctrl-btn icon-prev">⏮</button>
-                        <button onclick="togglePlay()" id="play-pause-btn" class="ctrl-btn icon-play-pause">▶️</button>
-                        <button onclick="playNext()" class="ctrl-btn icon-next">⏭</button>
+                        <button onclick="playPrev()" class="ctrl-btn">⏮</button>
+                        <button onclick="togglePlay()" id="play-pause-btn" class="ctrl-btn play-btn">▶️</button>
+                        <button onclick="playNext()" class="ctrl-btn">⏭</button>
                     </div>
                 </div>
             </footer>
@@ -79,4 +96,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-
