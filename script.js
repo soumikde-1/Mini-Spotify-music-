@@ -1,70 +1,321 @@
-:root {
-    --bg-main: #0B0F19; 
-    --bg-card: #151A28; 
-    --theme-color: #20B2AA; 
-    --theme-hover: #1A9089;
-    --text-white: #FFFFFF;
-    --text-gray: #A0AABF;
-    --font-main: 'Poppins', sans-serif;
+const firebaseConfig = {
+    apiKey: "AIzaSyDGSdb35nB5ArKxB1hjCBFFXC7ahKna_eI",
+    authDomain: "secretchat-51403.firebaseapp.com",
+    databaseURL: "https://secretchat-51403-default-rtdb.firebaseio.com",
+    projectId: "secretchat-51403",
+    storageBucket: "secretchat-51403.appspot.com",
+    messagingSenderId: "170278237183",
+    appId: "1:170278237183:web:ad65532f2d41c12fcaadca"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let ytPlayer;
+let playerReady = false;
+let currentPlaylist = []; 
+let currentSongIndex = -1;
+let progressInterval;
+let isFirstLoad = true;
+
+window.onload = () => {
+    document.getElementById('login-input').addEventListener('input', checkAdminInput);
+    checkSession();
+};
+
+function checkAdminInput() {
+    let input = document.getElementById('login-input').value.trim();
+    document.getElementById('password-input').style.display = (input === "desoumikde.2005@gmail.com") ? 'block' : 'none';
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-body { background-color: var(--bg-main); color: var(--text-white); font-family: var(--font-main); height: 100vh; overflow: hidden; font-size: 14px; }
-input:focus, textarea:focus, select:focus { outline: none; border-color: var(--theme-color); }
+function handleEntry() {
+    let user = document.getElementById('login-input').value.trim();
+    let pass = document.getElementById('password-input').value;
 
-.screen { position: absolute; width: 100%; height: 100%; top: 0; left: 0; overflow-y: auto; padding-bottom: 120px; background-color: var(--bg-main); }
-.card { background: var(--bg-card); border-radius: 15px; padding: 18px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-input, textarea, select { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #2A3347; border-radius: 8px; background: #0B0F19; color: var(--text-white); font-family: var(--font-main); }
-.theme-btn { background: var(--theme-color); color: #fff; font-weight: 600; border-radius: 30px; padding: 14px; border: none; font-size: 14px; text-transform: uppercase; letter-spacing: 1.5px; width: 100%; cursor: pointer; transition: 0.3s; }
-.theme-btn:active { background: var(--theme-hover); transform: scale(0.98); }
+    if (user === "desoumikde.2005@gmail.com" && pass === "SOUMIKDEY2005") {
+        localStorage.setItem('currentUser', 'Admin');
+        localStorage.setItem('isAdmin', 'true');
+    } else if (user !== "") {
+        localStorage.setItem('currentUser', user);
+        localStorage.setItem('isAdmin', 'false');
+    } else { alert("ইমেল বা নাম লিখুন"); return; }
+    checkSession();
+}
 
-#login-section { display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at top, #152336, var(--bg-main)); }
-.splash-content { width: 100%; max-width: 320px; text-align: center; }
-.logo-large { font-size: 65px; margin-bottom: 10px; color: var(--theme-color); }
-.splash-heading { font-size: 36px; font-weight: 700; color: var(--theme-color); margin-bottom: 5px; }
-.sub-heading { color: var(--text-gray); font-size: 13px; margin-bottom: 30px; }
+function checkSession() {
+    let user = localStorage.getItem('currentUser');
+    let isAdmin = localStorage.getItem('isAdmin') === 'true';
 
-.app-header { display: flex; align-items: center; justify-content: space-between; padding: 20px; background: var(--bg-card); border-bottom: 1px solid #2A3347; }
-.header-left { display: flex; align-items: center; }
-.profile-placeholder { font-size: 24px; background: rgba(32, 178, 170, 0.2); border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
-.header-text { margin-left: 12px; }
-.greeting { color: var(--text-gray); font-size: 12px; }
-.playlist-heading { font-weight: 600; font-size: 18px; }
-.logout-btn { width: auto; font-size: 11px; background: #E74C3C; padding: 8px 15px; border-radius: 20px; }
+    if (user) {
+        document.getElementById('login-section').style.display = 'none'; 
+        document.getElementById('dashboard-screen').style.display = 'block'; 
+        document.getElementById('welcome-name').innerText = user;
 
-/* Admin Controls Custom UI */
-.admin-group-manager { border-bottom: 1px solid #2A3347; padding-bottom: 15px; margin-bottom: 15px; }
-.admin-actions { display: flex; gap: 8px; margin-top: 5px; }
-.action-btn { flex: 1; padding: 10px; border-radius: 8px; border: none; background: #2A3347; color: #fff; font-size: 11px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
-.action-btn:active { opacity: 0.8; }
-.danger-btn { background: #E74C3C; }
+        if (isAdmin) { document.getElementById('admin-controls').style.display = 'block'; }
+        loadDynamicGroups(); 
+    }
+}
 
-.content-area { padding: 20px; }
-.group-controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
-.group-controls h3 { font-size: 16px; color: var(--theme-color); margin-right: 10px; }
-.group-controls select { margin: 0; padding: 10px; width: 60%; }
-.song-count { font-size: 12px; color: var(--text-gray); margin-bottom: 15px; }
+function logout() {
+    localStorage.clear();
+    location.reload();
+}
 
-.song-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 10px; border-bottom: 1px solid #1A2235; border-radius: 8px; margin-bottom: 5px; transition: 0.2s; }
-.song-item:active { background: #1A2235; }
-.song-number { width: 25px; color: var(--text-gray); font-size: 13px; font-weight: 600; }
-.song-art { font-size: 20px; margin-right: 15px; }
-.song-details-inner { flex: 1; overflow: hidden; }
-.song-title-main { font-weight: 500; color: var(--text-white); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.song-artist-sub { color: var(--text-gray); font-size: 11px; margin-top: 3px; }
-.delete-btn { background: #E74C3C; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 10px; cursor: pointer; margin-left:10px; }
+// ================= ADMIN: GROUP MANAGEMENT =================
 
-.bottom-player { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--bg-card); border-top: 1px solid #2A3347; padding: 10px 20px 20px 20px; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); z-index: 100; }
-.progress-container { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 11px; color: var(--text-gray); }
-input[type="range"] { -webkit-appearance: none; flex: 1; height: 4px; background: #2A3347; border-radius: 5px; outline: none; padding: 0; margin: 0; }
-input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--theme-color); cursor: pointer; }
+function loadDynamicGroups() {
+    db.ref('groups').on('value', (snapshot) => {
+        let adminSelect = document.getElementById('admin-group-select');
+        let userSelect = document.getElementById('user-group-select');
+        let currentSelection = userSelect.value; 
 
-.player-content { display: flex; align-items: center; justify-content: space-between; }
-.song-info-small { display: flex; align-items: center; flex: 1; max-width: 60%; }
-.mini-art { font-size: 22px; margin-right: 12px; }
-.song-info-small .text { overflow: hidden; width: 100%; }
-#player-song-title { font-weight: 600; font-size: 14px; color: var(--theme-color); }
-#player-artist { font-size: 11px; color: var(--text-gray); }
-.player-btns { display: flex; align-items: center; gap: 20px; }
-.ctrl-btn { background: none; border: none; font-size: 20px; color: var(--text-white); cursor: pointer; }
-.play-btn { font-size: 32px; color: var(--theme-color); }
+        adminSelect.innerHTML = ""; userSelect.innerHTML = "";
+        let data = snapshot.val();
+        
+        if (data) {
+            Object.keys(data).sort().forEach(groupName => { // গ্রুপগুলো A-Z সর্ট করা
+                let opt = `<option value="${groupName}">${groupName}</option>`;
+                adminSelect.innerHTML += opt;
+                userSelect.innerHTML += opt;
+            });
+        } else {
+            // যদি সব ডিলিট হয়ে যায়, ডিফল্ট Group A অটো তৈরি হবে
+            db.ref('groups/Group A').push({ 
+                title: "Welcome Song", 
+                videoId: "dQw4w9WgXcQ", 
+                timestamp: Date.now() 
+            });
+            return;
+        }
+
+        if(document.querySelector(`#user-group-select option[value="${currentSelection}"]`)) {
+            userSelect.value = currentSelection;
+            if(adminSelect) adminSelect.value = currentSelection;
+        } else {
+            userSelect.selectedIndex = 0;
+            if(adminSelect.options.length > 0) adminSelect.selectedIndex = 0;
+        }
+        
+        if(isFirstLoad) { changeGroup(); isFirstLoad = false; }
+    });
+}
+
+function createNewGroup() {
+    let newGroupName = prompt("নতুন গ্রুপের নাম লিখুন:");
+    if (newGroupName && newGroupName.trim() !== "") {
+        let cleanName = newGroupName.trim();
+        db.ref('groups/' + cleanName).push({ 
+            title: "Welcome to " + cleanName, 
+            videoId: "dQw4w9WgXcQ", 
+            timestamp: Date.now() 
+        });
+        alert(`"${cleanName}" তৈরি হয়েছে!`);
+        document.getElementById('user-group-select').value = cleanName;
+        changeGroup();
+    }
+}
+
+function renameGroup() {
+    let oldName = document.getElementById('admin-group-select').value;
+    if(!oldName) return alert("কোনো গ্রুপ সিলেক্ট করা নেই!");
+    
+    let newName = prompt(`"${oldName}" এর নতুন নাম দিন:`, oldName);
+    if (newName && newName.trim() !== "" && newName !== oldName) {
+        let cleanName = newName.trim();
+        
+        // পুরনো ডেটা কপি করে নতুন নোডে রাখা, তারপর পুরনো নোড ডিলিট করা
+        db.ref('groups/' + oldName).once('value', snapshot => {
+            let data = snapshot.val();
+            if(data) {
+                db.ref('groups/' + cleanName).set(data, (error) => {
+                    if(!error) {
+                        db.ref('groups/' + oldName).remove();
+                        alert("নাম পরিবর্তন সফল হয়েছে!");
+                    }
+                });
+            }
+        });
+    }
+}
+
+function deleteGroup() {
+    let groupName = document.getElementById('admin-group-select').value;
+    if(!groupName) return alert("কোনো গ্রুপ সিলেক্ট করা নেই!");
+    
+    if (confirm(`আপনি কি সত্যিই "${groupName}" পুরোপুরি ডিলিট করতে চান?`)) {
+        db.ref('groups/' + groupName).remove();
+        alert(`"${groupName}" ডিলিট হয়েছে!`);
+        changeGroup();
+    }
+}
+
+// ================= ADMIN: UPLOAD & DELETE SONG =================
+
+function extractYTId(input) {
+    let match = input.match(/(?:embed\/|v=|youtu\.be\/|\/v\/|watch\?v=)([^"&?\/\s]{11})/);
+    return match ? match[1] : (input.length === 11 ? input : null);
+}
+
+function uploadSong() {
+    let group = document.getElementById('admin-group-select').value;
+    if(!group) return alert("আগে একটি গ্রুপ সিলেক্ট বা তৈরি করুন!");
+
+    let url = document.getElementById('yt-url-input').value.trim();
+    let ytId = extractYTId(url);
+
+    if (ytId) {
+        document.getElementById('yt-url-input').value = "Loading title...";
+        fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${ytId}`)
+        .then(res => res.json())
+        .then(data => {
+            let songTitle = data.title || "Unknown YouTube Audio";
+            db.ref('groups/' + group).push({ title: songTitle, videoId: ytId, timestamp: Date.now() });
+            document.getElementById('yt-url-input').value = "";
+        }).catch(() => {
+            db.ref('groups/' + group).push({ title: "YouTube Audio", videoId: ytId, timestamp: Date.now() });
+            document.getElementById('yt-url-input').value = "";
+        });
+    } else { alert("সঠিক YouTube লিংক দিন"); }
+}
+
+function deleteSong(group, songKey) {
+    if (confirm("এই গানটি ডিলিট করতে চান?")) { db.ref('groups/' + group + '/' + songKey).remove(); }
+}
+
+// ================= USER: LOAD & SORT PLAYLIST =================
+
+function changeGroup() {
+    let group = document.getElementById('user-group-select').value;
+    if(!group) return;
+    
+    // সিঙ্ক্রোনাইজ এডমিন ড্রপডাউন
+    let adminSelect = document.getElementById('admin-group-select');
+    if(adminSelect) adminSelect.value = group;
+
+    document.getElementById('current-group-display').innerText = group;
+    
+    db.ref('groups/' + group).off('value'); 
+    db.ref('groups/' + group).on('value', (snapshot) => {
+        let data = snapshot.val();
+        currentPlaylist = [];
+        let view = document.getElementById('playlist-view');
+        let isAdmin = localStorage.getItem('isAdmin') === 'true';
+
+        if (data) {
+            let songCount = 0;
+            let tempView = "";
+            let dataArr = Object.entries(data);
+
+            // অ্যালফাবেটিক্যালি সর্টিং (A-Z) গানের নাম অনুযায়ী
+            dataArr.sort((a, b) => {
+                let titleA = a[1].title.toLowerCase();
+                let titleB = b[1].title.toLowerCase();
+                return titleA.localeCompare(titleB);
+            });
+
+            dataArr.forEach(([key, song], index) => {
+                songCount++;
+                currentPlaylist.push({ key: key, title: song.title, id: song.videoId });
+                
+                tempView += `
+                    <div class="song-item" onclick="playSong(${index})">
+                        <span class="song-number">${songCount}</span>
+                        <div class="song-art">🎵</div>
+                        <div class="song-details-inner">
+                            <p class="song-title-main">${song.title}</p>
+                            <p class="song-artist-sub">YouTube Music</p>
+                        </div>
+                        ${isAdmin ? `<button class="delete-btn" onclick="deleteSong('${group}', '${key}'); event.stopPropagation();">DEL</button>` : ''}
+                    </div>
+                `;
+            });
+            view.innerHTML = tempView;
+            document.getElementById('total-songs-count').innerText = songCount;
+        } else {
+            view.innerHTML = "<p style='color:gray; padding:20px; text-align:center;'>এই গ্রুপে কোনো গান নেই</p>";
+            document.getElementById('total-songs-count').innerText = "0";
+        }
+    });
+}
+
+// ================= PLAYER LOGIC =================
+function onYouTubeIframeAPIReady() {
+    ytPlayer = new YT.Player('yt-player-container', {
+        height: '300', width: '300', 
+        playerVars: { 'autoplay': 1, 'playsinline': 1, 'controls': 0 },
+        events: { 'onReady': () => { playerReady = true; }, 'onStateChange': onPlayerStateChange }
+    });
+}
+
+function onPlayerStateChange(event) {
+    if (event.data === YT.PlayerState.PLAYING) {
+        document.getElementById('play-pause-btn').innerText = "⏸️";
+        startProgressBar();
+    } else if (event.data === YT.PlayerState.PAUSED) {
+        document.getElementById('play-pause-btn').innerText = "▶️";
+        clearInterval(progressInterval);
+    } else if (event.data === YT.PlayerState.ENDED) {
+        playNext();
+    }
+}
+
+function playSong(index) {
+    if (currentPlaylist.length > 0) {
+        currentSongIndex = index;
+        let song = currentPlaylist[currentSongIndex];
+        if (playerReady && ytPlayer.loadVideoById) {
+            ytPlayer.loadVideoById(song.id);
+            ytPlayer.playVideo(); 
+            document.getElementById('player-song-title').innerText = song.title;
+        }
+    }
+}
+
+function togglePlay() {
+    if (!playerReady) return;
+    let state = ytPlayer.getPlayerState();
+    if (state === YT.PlayerState.PLAYING) { ytPlayer.pauseVideo(); } 
+    else { ytPlayer.playVideo(); }
+}
+
+function playNext() {
+    if (currentPlaylist.length > 0) {
+        currentSongIndex = (currentSongIndex + 1) % currentPlaylist.length;
+        playSong(currentSongIndex);
+    }
+}
+
+function playPrev() {
+    if (currentPlaylist.length > 0) {
+        currentSongIndex = (currentSongIndex - 1 + currentPlaylist.length) % currentPlaylist.length;
+        playSong(currentSongIndex);
+    }
+}
+
+function formatTime(time) {
+    if(!time) return "0:00";
+    time = Math.round(time);
+    let minutes = Math.floor(time / 60);
+    let seconds = time - minutes * 60;
+    return minutes + ":" + (seconds < 10 ? "0" + seconds : seconds);
+}
+
+function startProgressBar() {
+    clearInterval(progressInterval);
+    progressInterval = setInterval(() => {
+        if(playerReady && ytPlayer.getCurrentTime) {
+            let currentTime = ytPlayer.getCurrentTime();
+            let duration = ytPlayer.getDuration();
+            document.getElementById('current-time').innerText = formatTime(currentTime);
+            document.getElementById('total-time').innerText = formatTime(duration);
+            document.getElementById('seek-bar').value = (currentTime / duration) * 100 || 0;
+        }
+    }, 1000);
+}
+
+function seekVideo() {
+    if (playerReady && ytPlayer.getDuration) {
+        let seekTo = ytPlayer.getDuration() * (document.getElementById('seek-bar').value / 100);
+        ytPlayer.seekTo(seekTo, true);
+    }
+}
