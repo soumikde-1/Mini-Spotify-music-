@@ -1,255 +1,70 @@
-// --- 1. FIREBASE CONFIG ---
-// তোমার আগের স্ক্রিনশট থেকে আইডিগুলো এখানে বসিয়ে দিয়েছি। তুমি appId এবং projectId কনফার্ম করে নিও।
-const firebaseConfig = {
-    apiKey: "AIzaSyDGSdb35nB5ArKxB1hjCBFFXC7ahKna_eI",
-    authDomain: "secretchat-51403.firebaseapp.com",
-    databaseURL: "https://secretchat-51403-default-rtdb.firebaseio.com",
-    projectId: "secretchat-51403",
-    storageBucket: "secretchat-51403.appspot.com",
-    messagingSenderId: "170278237183",
-    appId: "1:170278237183:web:ad65532f2d41c12fcaadca"
-};
-
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-
-// --- STATE MANAGEMENT ---
-let ytPlayer;
-let playerReady = false;
-let currentPlaylist = []; // Array of song objects: {key, title, id}
-let currentSongIndex = -1;
-const groups = Array.from({length: 26}, (_, i) => String.fromCharCode(65 + i));
-
-// On Load: Generate A-Z and Check Session
-window.onload = () => {
-    let adminSelect = document.getElementById('admin-group-select');
-    let userSelect = document.getElementById('user-group-select');
-    groups.forEach(g => {
-        let opt = `<option value="Group${g}">Group ${g}</option>`;
-        adminSelect.innerHTML += opt;
-        userSelect.innerHTML += opt;
-    });
-
-    document.getElementById('login-input').addEventListener('input', checkAdminInput);
-    checkSession();
-};
-
-// Admin পাসওয়ার্ড ফিল্ড দেখানো
-function checkAdminInput() {
-    let input = document.getElementById('login-input').value.trim();
-    if (input === "desoumikde.2005@gmail.com") {
-        document.getElementById('password-input').style.display = 'block';
-    } else {
-        document.getElementById('password-input').style.display = 'none';
-    }
+:root {
+    --bg-main: #0B0F19; 
+    --bg-card: #151A28; 
+    --theme-color: #20B2AA; 
+    --theme-hover: #1A9089;
+    --text-white: #FFFFFF;
+    --text-gray: #A0AABF;
+    --font-main: 'Poppins', sans-serif;
 }
 
-// --- LOGIN & SESSION LOGIC ---
-function handleEntry() {
-    let user = document.getElementById('login-input').value.trim();
-    let pass = document.getElementById('password-input').value;
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { background-color: var(--bg-main); color: var(--text-white); font-family: var(--font-main); height: 100vh; overflow: hidden; font-size: 14px; }
+input:focus, textarea:focus, select:focus { outline: none; border-color: var(--theme-color); }
 
-    if (user === "desoumikde.2005@gmail.com" && pass === "SOUMIKDEY2005") {
-        localStorage.setItem('currentUser', 'Admin');
-        localStorage.setItem('isAdmin', 'true');
-    } else if (user !== "") {
-        localStorage.setItem('currentUser', user);
-        localStorage.setItem('isAdmin', 'false');
-    } else { alert("ইমেল বা নাম লিখুন"); return; }
-    checkSession();
-}
+.screen { position: absolute; width: 100%; height: 100%; top: 0; left: 0; overflow-y: auto; padding-bottom: 120px; background-color: var(--bg-main); }
+.card { background: var(--bg-card); border-radius: 15px; padding: 18px; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+input, textarea, select { width: 100%; padding: 14px; margin: 8px 0; border: 1px solid #2A3347; border-radius: 8px; background: #0B0F19; color: var(--text-white); font-family: var(--font-main); }
+.theme-btn { background: var(--theme-color); color: #fff; font-weight: 600; border-radius: 30px; padding: 14px; border: none; font-size: 14px; text-transform: uppercase; letter-spacing: 1.5px; width: 100%; cursor: pointer; transition: 0.3s; }
+.theme-btn:active { background: var(--theme-hover); transform: scale(0.98); }
 
-function checkSession() {
-    let user = localStorage.getItem('currentUser');
-    let isAdmin = localStorage.getItem('isAdmin') === 'true';
+#login-section { display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at top, #152336, var(--bg-main)); }
+.splash-content { width: 100%; max-width: 320px; text-align: center; }
+.logo-large { font-size: 65px; margin-bottom: 10px; color: var(--theme-color); }
+.splash-heading { font-size: 36px; font-weight: 700; color: var(--theme-color); margin-bottom: 5px; }
+.sub-heading { color: var(--text-gray); font-size: 13px; margin-bottom: 30px; }
 
-    if (user) {
-        document.getElementById('login-section').classList.remove('show');
-        document.getElementById('dashboard-screen').classList.add('show');
-        document.getElementById('welcome-name').innerText = user;
+.app-header { display: flex; align-items: center; justify-content: space-between; padding: 20px; background: var(--bg-card); border-bottom: 1px solid #2A3347; }
+.header-left { display: flex; align-items: center; }
+.profile-placeholder { font-size: 24px; background: rgba(32, 178, 170, 0.2); border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; }
+.header-text { margin-left: 12px; }
+.greeting { color: var(--text-gray); font-size: 12px; }
+.playlist-heading { font-weight: 600; font-size: 18px; }
+.logout-btn { width: auto; font-size: 11px; background: #E74C3C; padding: 8px 15px; border-radius: 20px; }
 
-        if (isAdmin) {
-            document.getElementById('admin-controls').style.display = 'block';
-        }
-        changeGroup(); // Default group load
-    }
-}
+/* Admin Controls Custom UI */
+.admin-group-manager { border-bottom: 1px solid #2A3347; padding-bottom: 15px; margin-bottom: 15px; }
+.admin-actions { display: flex; gap: 8px; margin-top: 5px; }
+.action-btn { flex: 1; padding: 10px; border-radius: 8px; border: none; background: #2A3347; color: #fff; font-size: 11px; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+.action-btn:active { opacity: 0.8; }
+.danger-btn { background: #E74C3C; }
 
-function logout() {
-    localStorage.removeItem('currentUser');
-    localStorage.removeItem('isAdmin');
-    location.reload();
-}
+.content-area { padding: 20px; }
+.group-controls { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+.group-controls h3 { font-size: 16px; color: var(--theme-color); margin-right: 10px; }
+.group-controls select { margin: 0; padding: 10px; width: 60%; }
+.song-count { font-size: 12px; color: var(--text-gray); margin-bottom: 15px; }
 
-// --- ADMIN: UPLOAD & DELETE ---
-function extractYTId(input) {
-    let match = input.match(/(?:embed\/|v=|youtu\.be\/|\/v\/|watch\?v=)([^"&?\/\s]{11})/);
-    return match ? match[1] : (input.length === 11 ? input : null);
-}
+.song-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 10px; border-bottom: 1px solid #1A2235; border-radius: 8px; margin-bottom: 5px; transition: 0.2s; }
+.song-item:active { background: #1A2235; }
+.song-number { width: 25px; color: var(--text-gray); font-size: 13px; font-weight: 600; }
+.song-art { font-size: 20px; margin-right: 15px; }
+.song-details-inner { flex: 1; overflow: hidden; }
+.song-title-main { font-weight: 500; color: var(--text-white); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.song-artist-sub { color: var(--text-gray); font-size: 11px; margin-top: 3px; }
+.delete-btn { background: #E74C3C; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 10px; cursor: pointer; margin-left:10px; }
 
-function uploadSong() {
-    let group = document.getElementById('admin-group-select').value;
-    let url = document.getElementById('yt-url-input').value.trim();
-    let ytId = extractYTId(url);
+.bottom-player { position: fixed; bottom: 0; left: 0; width: 100%; background: var(--bg-card); border-top: 1px solid #2A3347; padding: 10px 20px 20px 20px; box-shadow: 0 -5px 15px rgba(0,0,0,0.5); z-index: 100; }
+.progress-container { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 11px; color: var(--text-gray); }
+input[type="range"] { -webkit-appearance: none; flex: 1; height: 4px; background: #2A3347; border-radius: 5px; outline: none; padding: 0; margin: 0; }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: var(--theme-color); cursor: pointer; }
 
-    if (ytId) {
-        let ref = db.ref('groups/' + group);
-        // YouTube API theke TITLE আনা সম্ভব না (API key লাগে), তাই আমরা ডামি টাইটেল সেভ করছি।
-        ref.push({ title: "Song on YouTube", videoId: ytId, timestamp: Date.now() });
-        document.getElementById('yt-url-input').value = "";
-        alert("uploaded to " + group);
-    } else { alert("সঠিক YouTube লিংক বা আইডি দিন"); }
-}
-
-function deleteSong(group, songKey) {
-    if (confirm("এই গানটি ডিলিট করতে চান?")) {
-        db.ref('groups/' + group + '/' + songKey).remove();
-        alert("ডিলিট হয়েছে");
-    }
-}
-
-// --- USER: PLAYLIST & UI DUPLICATION ---
-function changeGroup() {
-    let group = document.getElementById('user-group-select').value;
-    document.getElementById('current-group-display').innerText = group.replace('Group', '');
-    document.getElementById('playlist-view').innerHTML = "<p style='color:gray; padding:20px;'>Playlist Loading...</p>";
-    
-    // Stop current listening for real-time updates
-    db.ref('groups/' + group).off('value');
-    
-    // Start listening for the new group
-    db.ref('groups/' + group).on('value', (snapshot) => {
-        let data = snapshot.val();
-        currentPlaylist = [];
-        let view = document.getElementById('playlist-view');
-        let isAdmin = localStorage.getItem('isAdmin') === 'true';
-
-        if (data) {
-            let songCount = 0;
-            let tempView = "";
-            let dataArr = Object.entries(data); // Get [key, val] pairs
-            // Sort by timestamp (optional)
-            dataArr.sort((a, b) => a[1].timestamp - b[1].timestamp);
-
-            dataArr.forEach(([key, song], index) => {
-                songCount++;
-                currentPlaylist.push({ key: key, title: `YouTube Video ID: ${song.videoId}`, id: song.videoId });
-                
-                // --- SPOTIFY LIST ITEM DUPLICATE (from image) ---
-                tempView += `
-                    <div class="song-item" onclick="playSong(${index})">
-                        <div class="song-item-info">
-                            <span class="song-number">${songCount}</span>
-                            <div class="song-art">🎵</div>
-                            <div class="song-details-inner">
-                                <p class="song-title-main">Video ID: ${song.videoId}</p>
-                                <p class="song-artist-sub">YouTube Music</p>
-                            </div>
-                        </div>
-                        <div class="song-item-controls">
-                            ${isAdmin ? `<button class="delete-btn" onclick="deleteSong('${group}', '${key}'); event.stopPropagation();">DEL</button>` : ''}
-                            <span class="song-heart-icon">♥</span>
-                        </div>
-                    </div>
-                `;
-            });
-            view.innerHTML = tempView;
-            document.getElementById('total-songs-count').innerText = songCount;
-            // If playlist was previously selected but empty, start first song
-            if (currentSongIndex === -1 && currentPlaylist.length > 0) { currentSongIndex = 0; playCurrent(); }
-        } else {
-            view.innerHTML = "<p style='color:gray; padding:20px;'>এই গ্রুপে কোনো গান নেই</p>";
-            document.getElementById('total-songs-count').innerText = "0";
-            if (ytPlayer && playerReady) ytPlayer.stopVideo();
-            updatePlayerUI(null);
-        }
-    });
-}
-
-// --- YOUTUBE API INIT ---
-function onYouTubeIframeAPIReady() {
-    ytPlayer = new YT.Player('yt-player-container', {
-        height: '1px', width: '1px',
-        playerVars: { 'autoplay': 1, 'playsinline': 1, 'controls': 0, 'rel': 0, 'fs': 0 },
-        events: { 'onReady': onPlayerReady, 'onStateChange': onPlayerStateChange }
-    });
-}
-
-function onPlayerReady(event) { playerReady = true; }
-
-// অটো প্লে এবং মিউজিক কন্ট্রোল
-function onPlayerStateChange(event) {
-    if (event.data === YT.PlayerState.PLAYING) {
-        document.getElementById('play-pause-btn').innerText = "⏸️"; // পজ আইকন
-        setupMediaSession();
-    } else if (event.data === YT.PlayerState.PAUSED) {
-        document.getElementById('play-pause-btn').innerText = "▶️"; // প্লে আইকন
-    } else if (event.data === YT.PlayerState.ENDED) {
-        playNext(); // গান শেষ হলে পরেরটা
-    }
-}
-
-// --- PLAYER CONTROLS & MEDIA SESSION API ---
-function playSong(index) {
-    if (currentPlaylist.length > 0 && index < currentPlaylist.length) {
-        currentSongIndex = index;
-        playCurrent();
-    }
-}
-
-function playCurrent() {
-    if (currentPlaylist.length > 0 && currentSongIndex >= 0 && currentSongIndex < currentPlaylist.length) {
-        let song = currentPlaylist[currentSongIndex];
-        if (ytPlayer && playerReady && ytPlayer.loadVideoById) {
-            ytPlayer.loadVideoById(song.id);
-            updatePlayerUI(song);
-        }
-    }
-}
-
-function togglePlay() {
-    if (!ytPlayer || !playerReady) return;
-    let state = ytPlayer.getPlayerState();
-    if (state === YT.PlayerState.PLAYING) { ytPlayer.pauseVideo(); } 
-    else { ytPlayer.playVideo(); }
-}
-
-function playNext() {
-    if (currentPlaylist.length > 0) {
-        currentSongIndex = (currentSongIndex + 1) % currentPlaylist.length; // Loop back to start
-        playCurrent();
-    }
-}
-
-function playPrev() {
-    if (currentPlaylist.length > 0) {
-        currentSongIndex = (currentSongIndex - 1 + currentPlaylist.length) % currentPlaylist.length; // Loop to end
-        playCurrent();
-    }
-}
-
-function updatePlayerUI(song) {
-    let titleEl = document.getElementById('player-song-title');
-    if (song) {
-        titleEl.innerText = song.id; // ইউটিউবের ডামি টাইটেল বা আইডি
-    } else {
-        titleEl.innerText = "Select a Song";
-    }
-}
-
-// **স্ক্রিন লক বা ব্যাকগ্রাউন্ডে মিউজিক কন্ট্রোল**
-function setupMediaSession() {
-    if ('mediaSession' in navigator && currentPlaylist.length > 0 && currentSongIndex >= 0) {
-        let song = currentPlaylist[currentSongIndex];
-        navigator.mediaSession.metadata = new MediaMetadata({
-            title: `YouTube Video ${song.id}`,
-            artist: 'Sotify Group ' + document.getElementById('user-group-select').value.replace('Group',''),
-            artwork: [ { src: 'https://cdn0.iconfinder.com/data/icons/spotify-colored-dot-icon/512/spotify_music-512.png', sizes: '512x512', type: 'image/png' } ] // Dummy art
-        });
-        navigator.mediaSession.setActionHandler('play', () => ytPlayer.playVideo());
-        navigator.mediaSession.setActionHandler('pause', () => ytPlayer.pauseVideo());
-        navigator.mediaSession.setActionHandler('previoustrack', playPrev);
-        navigator.mediaSession.setActionHandler('nexttrack', playNext);
-    }
-      }
-
+.player-content { display: flex; align-items: center; justify-content: space-between; }
+.song-info-small { display: flex; align-items: center; flex: 1; max-width: 60%; }
+.mini-art { font-size: 22px; margin-right: 12px; }
+.song-info-small .text { overflow: hidden; width: 100%; }
+#player-song-title { font-weight: 600; font-size: 14px; color: var(--theme-color); }
+#player-artist { font-size: 11px; color: var(--text-gray); }
+.player-btns { display: flex; align-items: center; gap: 20px; }
+.ctrl-btn { background: none; border: none; font-size: 20px; color: var(--text-white); cursor: pointer; }
+.play-btn { font-size: 32px; color: var(--theme-color); }
