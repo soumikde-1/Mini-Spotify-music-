@@ -61,8 +61,7 @@ function logout() {
     location.reload();
 }
 
-// ================= ADMIN: GROUP MANAGEMENT =================
-
+// ================= ADMIN LOGIC =================
 function loadDynamicGroups() {
     db.ref('groups').on('value', (snapshot) => {
         let adminSelect = document.getElementById('admin-group-select');
@@ -73,13 +72,12 @@ function loadDynamicGroups() {
         let data = snapshot.val();
         
         if (data) {
-            Object.keys(data).sort().forEach(groupName => { // গ্রুপগুলো A-Z সর্ট করা
+            Object.keys(data).sort().forEach(groupName => {
                 let opt = `<option value="${groupName}">${groupName}</option>`;
                 adminSelect.innerHTML += opt;
                 userSelect.innerHTML += opt;
             });
         } else {
-            // যদি সব ডিলিট হয়ে যায়, ডিফল্ট Group A অটো তৈরি হবে
             db.ref('groups/Group A').push({ 
                 title: "Welcome Song", 
                 videoId: "dQw4w9WgXcQ", 
@@ -109,7 +107,6 @@ function createNewGroup() {
             videoId: "dQw4w9WgXcQ", 
             timestamp: Date.now() 
         });
-        alert(`"${cleanName}" তৈরি হয়েছে!`);
         document.getElementById('user-group-select').value = cleanName;
         changeGroup();
     }
@@ -117,21 +114,15 @@ function createNewGroup() {
 
 function renameGroup() {
     let oldName = document.getElementById('admin-group-select').value;
-    if(!oldName) return alert("কোনো গ্রুপ সিলেক্ট করা নেই!");
-    
+    if(!oldName) return;
     let newName = prompt(`"${oldName}" এর নতুন নাম দিন:`, oldName);
     if (newName && newName.trim() !== "" && newName !== oldName) {
         let cleanName = newName.trim();
-        
-        // পুরনো ডেটা কপি করে নতুন নোডে রাখা, তারপর পুরনো নোড ডিলিট করা
         db.ref('groups/' + oldName).once('value', snapshot => {
             let data = snapshot.val();
             if(data) {
                 db.ref('groups/' + cleanName).set(data, (error) => {
-                    if(!error) {
-                        db.ref('groups/' + oldName).remove();
-                        alert("নাম পরিবর্তন সফল হয়েছে!");
-                    }
+                    if(!error) db.ref('groups/' + oldName).remove();
                 });
             }
         });
@@ -140,16 +131,11 @@ function renameGroup() {
 
 function deleteGroup() {
     let groupName = document.getElementById('admin-group-select').value;
-    if(!groupName) return alert("কোনো গ্রুপ সিলেক্ট করা নেই!");
-    
-    if (confirm(`আপনি কি সত্যিই "${groupName}" পুরোপুরি ডিলিট করতে চান?`)) {
+    if(groupName && confirm(`আপনি কি সত্যিই "${groupName}" পুরোপুরি ডিলিট করতে চান?`)) {
         db.ref('groups/' + groupName).remove();
-        alert(`"${groupName}" ডিলিট হয়েছে!`);
         changeGroup();
     }
 }
-
-// ================= ADMIN: UPLOAD & DELETE SONG =================
 
 function extractYTId(input) {
     let match = input.match(/(?:embed\/|v=|youtu\.be\/|\/v\/|watch\?v=)([^"&?\/\s]{11})/);
@@ -168,8 +154,7 @@ function uploadSong() {
         fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${ytId}`)
         .then(res => res.json())
         .then(data => {
-            let songTitle = data.title || "Unknown YouTube Audio";
-            db.ref('groups/' + group).push({ title: songTitle, videoId: ytId, timestamp: Date.now() });
+            db.ref('groups/' + group).push({ title: data.title || "Unknown Audio", videoId: ytId, timestamp: Date.now() });
             document.getElementById('yt-url-input').value = "";
         }).catch(() => {
             db.ref('groups/' + group).push({ title: "YouTube Audio", videoId: ytId, timestamp: Date.now() });
@@ -182,13 +167,11 @@ function deleteSong(group, songKey) {
     if (confirm("এই গানটি ডিলিট করতে চান?")) { db.ref('groups/' + group + '/' + songKey).remove(); }
 }
 
-// ================= USER: LOAD & SORT PLAYLIST =================
-
+// ================= PLAYLIST & PLAYER LOGIC =================
 function changeGroup() {
     let group = document.getElementById('user-group-select').value;
     if(!group) return;
     
-    // সিঙ্ক্রোনাইজ এডমিন ড্রপডাউন
     let adminSelect = document.getElementById('admin-group-select');
     if(adminSelect) adminSelect.value = group;
 
@@ -206,21 +189,17 @@ function changeGroup() {
             let tempView = "";
             let dataArr = Object.entries(data);
 
-            // অ্যালফাবেটিক্যালি সর্টিং (A-Z) গানের নাম অনুযায়ী
-            dataArr.sort((a, b) => {
-                let titleA = a[1].title.toLowerCase();
-                let titleB = b[1].title.toLowerCase();
-                return titleA.localeCompare(titleB);
-            });
+            dataArr.sort((a, b) => a[1].title.toLowerCase().localeCompare(b[1].title.toLowerCase()));
 
             dataArr.forEach(([key, song], index) => {
                 songCount++;
                 currentPlaylist.push({ key: key, title: song.title, id: song.videoId });
+                let thumb = `https://img.youtube.com/vi/${song.videoId}/default.jpg`;
                 
                 tempView += `
                     <div class="song-item" onclick="playSong(${index})">
                         <span class="song-number">${songCount}</span>
-                        <div class="song-art">🎵</div>
+                        <img src="${thumb}" class="song-art-img" alt="art">
                         <div class="song-details-inner">
                             <p class="song-title-main">${song.title}</p>
                             <p class="song-artist-sub">YouTube Music</p>
@@ -238,11 +217,10 @@ function changeGroup() {
     });
 }
 
-// ================= PLAYER LOGIC =================
 function onYouTubeIframeAPIReady() {
     ytPlayer = new YT.Player('yt-player-container', {
         height: '300', width: '300', 
-        playerVars: { 'autoplay': 1, 'playsinline': 1, 'controls': 0 },
+        playerVars: { 'autoplay': 1, 'playsinline': 1, 'controls': 0, 'enablejsapi': 1 },
         events: { 'onReady': () => { playerReady = true; }, 'onStateChange': onPlayerStateChange }
     });
 }
@@ -255,7 +233,7 @@ function onPlayerStateChange(event) {
         document.getElementById('play-pause-btn').innerText = "▶️";
         clearInterval(progressInterval);
     } else if (event.data === YT.PlayerState.ENDED) {
-        playNext();
+        playNext(); // Auto-play next song
     }
 }
 
@@ -263,10 +241,31 @@ function playSong(index) {
     if (currentPlaylist.length > 0) {
         currentSongIndex = index;
         let song = currentPlaylist[currentSongIndex];
+        
         if (playerReady && ytPlayer.loadVideoById) {
             ytPlayer.loadVideoById(song.id);
             ytPlayer.playVideo(); 
+            
+            // UI Update
             document.getElementById('player-song-title').innerText = song.title;
+            document.getElementById('player-artwork').innerHTML = `<img src="https://img.youtube.com/vi/${song.id}/hqdefault.jpg">`;
+
+            // Lockscreen / Background Media Controls (MediaSession API)
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: song.title,
+                    artist: 'Mùsïç Fi - ' + document.getElementById('current-group-display').innerText,
+                    album: 'Your Playlist',
+                    artwork: [
+                        { src: `https://img.youtube.com/vi/${song.id}/hqdefault.jpg`, sizes: '480x360', type: 'image/jpeg' }
+                    ]
+                });
+
+                navigator.mediaSession.setActionHandler('play', () => ytPlayer.playVideo());
+                navigator.mediaSession.setActionHandler('pause', () => ytPlayer.pauseVideo());
+                navigator.mediaSession.setActionHandler('previoustrack', () => playPrev());
+                navigator.mediaSession.setActionHandler('nexttrack', () => playNext());
+            }
         }
     }
 }
